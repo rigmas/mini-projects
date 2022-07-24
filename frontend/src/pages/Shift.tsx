@@ -18,7 +18,7 @@ import { useHistory } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Alert from "@material-ui/lab/Alert";
 import { Link as RouterLink } from "react-router-dom";
-import { addDays, subDays } from 'date-fns';
+import { addDays, subDays, startOfWeek, endOfWeek, format } from 'date-fns';
 import { Button, Box } from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
@@ -120,7 +120,7 @@ interface WeekData {
   startDate: string;
   endDate: string;
   isPublished: boolean;
-  createdAt: Date | null;
+  createdAt: string | null;
 }
 
 const Shift = () => {
@@ -128,13 +128,14 @@ const Shift = () => {
   const history = useHistory();
 
   const [week, setWeek] = useState<WeekData>({
-    startDate: '2022 Jul 18',
-    endDate: '2022 Jul 24',
+    startDate: startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString(),
+    endDate: endOfWeek(new Date(), { weekStartsOn: 1 }).toISOString(),
     isPublished: false,
     createdAt: null
   });
 
-  const [publishId, setPublishId] = useState(0);
+  const [publishId, setPublishId] = useState<number>(0);
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [isDisableShiftAction, setDisableShiftAction] = useState(false);
   const [isDisablePublish, setDisablePublish] = useState(false);
   const [rows, setRows] = useState([]);
@@ -155,64 +156,72 @@ const Shift = () => {
     setShowDeleteConfirm(false);
   };
 
-  const onNextWeekClick = (endWeek: Date) => {
-    const startDate = addDays(endWeek, 1)
-    const endDate = addDays(endWeek, 7)
-    setWeek({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      createdAt: null,
-      isPublished: false
-    })
+  const handleWeekClick = (type: string, weekDate: Date): WeekData => {
+    const output = { createdAt: null, isPublished: false };
+    if (type === "NEXT") {
+      return {
+        ...output,
+        startDate: addDays(weekDate, 1).toISOString(),
+        endDate: addDays(weekDate, 7).toISOString(),
+      }
+    }
+    return {
+      ...output,
+      startDate: subDays(weekDate, 7).toISOString(),
+      endDate: subDays(weekDate, 1).toISOString()
+    }
+  }
 
-    fetchData(startDate.toISOString(), endDate.toISOString());
+  const onNextWeekClick = (endWeek: Date) => {
+    const weekData = handleWeekClick("NEXT", endWeek);
+    setWeek(weekData);
+    fetchData(weekData.startDate, weekData.endDate);
   };
 
   const onPreviousWeekClick = (startWeek: Date) => {
-    const endDate = subDays(startWeek, 1)
-    const startDate = subDays(startWeek, 7)
-    setWeek({
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      createdAt: null,
-      isPublished: false
-    })
-
-    fetchData(startDate.toISOString(), endDate.toISOString());
+    const weekData = handleWeekClick("PREV", startWeek);
+    setWeek(weekData);
+    fetchData(weekData.startDate, weekData.endDate);
   };
 
   const onPublishClick = async (id: number): Promise<void> => {
     await createPublish({ id });
-
     fetchData(week.startDate, week.endDate);
   }
 
-  const fetchData = async (weekStart: string, weekEnd: string) => {
-    console.log({isDisableShiftAction});
+  const handlePublishData = (isPublished: boolean, createdTime: string): void => {
+    if (isPublished) {
+      setDisablePublish(true);
+      setDisableShiftAction(true);
+      const createdAt = format(new Date(createdTime), "dd MMM yyyy, h:m aa");
+      setPublishedAt(createdAt);
+    } else {
+      setDisablePublish(false);
+    }
+  }
+
+  const handleDisplayData = (data: any): void => {
+    if (data?.shifts.length) {
+      setRows(data.shifts);
+      setPublishId(data.id);
+      setWeek(data);
+      setDisableShiftAction(false);
+
+      handlePublishData(data.isPublished, data.createdAt);
+    } else {
+      setRows([]);
+      setDisableShiftAction(false);
+      setDisablePublish(true);
+    }
+  }
+
+  const fetchData = async (weekStart: string | Date, weekEnd: string | Date) => {
     try {
       setIsLoading(true);
       setErrMsg("");
+
       const { results } = await getShifts(weekStart, weekEnd);
-      setRows(results?.shifts);
-      if (results?.shifts.length > 0) {
-        setRows(results.shifts);
-        setPublishId(results.id);
-        delete results.shifts;
-        setWeek(results);
-        setDisableShiftAction(false);
-
-        if (results.isPublished) {
-          setDisablePublish(true);
-          setDisableShiftAction(true);
-        } else {
-          setDisablePublish(false);
-        }
-
-      } else {
-        setRows([]);
-        setDisableShiftAction(false);
-        setDisablePublish(true);
-      }
+      handleDisplayData(results);
     } catch (err) {
       const message = getErrorMessage(err);
       setErrMsg(message);
@@ -268,8 +277,6 @@ const Shift = () => {
         throw new Error("ID is null");
       }
 
-      console.log({deleteDataById});
-
       await deleteShiftById(selectedId);
 
       const tempRows = [...rows];
@@ -310,18 +317,22 @@ const Shift = () => {
               alignItems='right'
               flexWrap={'wrap'}
             >
-              { week.createdAt
+              { publishedAt && week.isPublished
                 ?  <Typography
-                    // component="h2"
                     variant="caption"
-                    style={{color: '#26580f', marginRight: '8px', marginLeft: 'auto', marginTop: 'auto', marginBottom: 'auto'}}
+                    style={{
+                      color: '#26580f', 
+                      marginRight: '8px', 
+                      marginLeft: 'auto', 
+                      marginTop: 'auto', 
+                      marginBottom: 'auto'
+                    }}
                     >
-                    {`Week published on ${week.createdAt}`}
+                    {`Week published on ${publishedAt}`}
                   </Typography>  
-                : null
+                : <Typography style={{marginLeft: 'auto'}}></Typography>
               }
             
-
               <Button 
                 variant="outlined" 
                 disabled={isDisableShiftAction} 

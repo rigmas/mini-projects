@@ -1,8 +1,6 @@
 import { getAxiosInstance } from ".";
 
-export const getShifts = async (startDate: string, endDate:string) => {
-  console.log({startDate, endDate}, 'getShifts');
-  
+export const getShifts = async (startDate: string | Date, endDate:string | Date) => {
   const api = getAxiosInstance()
   const { data } = await api.get(`/publish?startDate=${startDate}&endDate=${endDate}`);
   return data;
