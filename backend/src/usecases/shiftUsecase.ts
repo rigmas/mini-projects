@@ -3,9 +3,9 @@ import * as publishRepository from "../database/default/repository/publishReposi
 import Shift from "../database/default/entity/shift";
 import Publish from "../database/default/entity/publish";
 import { ICreateShift, IUpdateShift } from "../shared/interfaces";
-import { FindManyOptions, FindOneOptions, In, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
+import { FindManyOptions, FindOneOptions, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
 import { HttpError } from '../shared/classes/HttpError';
-import { startOfWeek, endOfWeek, isEqual, isWithinInterval, addDays, subDays, formatISO } from 'date-fns';
+import { startOfWeek, endOfWeek, formatISO } from 'date-fns';
 import { isIntervalClashed } from "../shared/functions"
 
 export const find = async (opts: FindManyOptions<Shift>): Promise<Shift[]> => {
