@@ -1,0 +1,1 @@
+SELECT 'CREATE DATABASE "hapi-boilerplate"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'hapi-boilerplate')\gexec
