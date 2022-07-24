@@ -28,7 +28,7 @@ function App() {
               <ShiftForm />
             </Dashboard>
           </Route>
-          <Route exact path="/shift/:id/edit">
+          <Route exact path="/shift/:id/edit/:publishId">
             <Dashboard>
               <ShiftForm />
             </Dashboard>

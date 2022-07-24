@@ -14,6 +14,7 @@ export const updateShiftDto = Joi.object({
   date: Joi.date(),
   startTime: Joi.string().regex(timeRegex),
   endTime:Joi.string().regex(timeRegex),
+  publishId: Joi.string().required(),
 });
 
 
