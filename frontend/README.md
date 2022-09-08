@@ -1,4 +1,4 @@
-# Staffany Take Home Test - Frontend
+# Frontend
 
 This repo was generated with Create React App
 
